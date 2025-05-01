@@ -3,7 +3,7 @@ from sqlalchemy import func, or_, select
 from db import Session
 from models import Product
 
-with (Session() as session):
+with Session() as session:
     with session.begin():
         # 1
         q = select(Product).where(Product.year == 1983).order_by(Product.name).limit(3)
