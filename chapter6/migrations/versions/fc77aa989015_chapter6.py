@@ -1,8 +1,8 @@
-"""blog integration
+"""chapter6
 
-Revision ID: b8c2435dfe77
-Revises: 251207424ac9
-Create Date: 2023-01-29 17:57:04.954041
+Revision ID: fc77aa989015
+Revises: f17ee5e632cf
+Create Date: 2025-06-08 09:49:33.375902
 
 """
 from alembic import op
@@ -10,8 +10,8 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision = 'b8c2435dfe77'
-down_revision = '251207424ac9'
+revision = 'fc77aa989015'
+down_revision = 'f17ee5e632cf'
 branch_labels = None
 depends_on = None
 
@@ -25,6 +25,14 @@ def upgrade() -> None:
     )
     with op.batch_alter_table('blog_authors', schema=None) as batch_op:
         batch_op.create_index(batch_op.f('ix_blog_authors_name'), ['name'], unique=False)
+
+    op.create_table('languages',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('name', sa.String(length=32), nullable=False),
+    sa.PrimaryKeyConstraint('id', name=op.f('pk_languages'))
+    )
+    with op.batch_alter_table('languages', schema=None) as batch_op:
+        batch_op.create_index(batch_op.f('ix_languages_name'), ['name'], unique=True)
 
     op.create_table('blog_users',
     sa.Column('id', sa.Uuid(), nullable=False),
@@ -41,15 +49,21 @@ def upgrade() -> None:
     sa.Column('author_id', sa.Integer(), nullable=False),
     sa.Column('product_id', sa.Integer(), nullable=True),
     sa.Column('timestamp', sa.DateTime(), nullable=False),
+    sa.Column('language_id', sa.Integer(), nullable=True),
+    sa.Column('translation_of_id', sa.Integer(), nullable=True),
     sa.ForeignKeyConstraint(['author_id'], ['blog_authors.id'], name=op.f('fk_blog_articles_author_id_blog_authors')),
+    sa.ForeignKeyConstraint(['language_id'], ['languages.id'], name=op.f('fk_blog_articles_language_id_languages')),
     sa.ForeignKeyConstraint(['product_id'], ['products.id'], name=op.f('fk_blog_articles_product_id_products')),
+    sa.ForeignKeyConstraint(['translation_of_id'], ['blog_articles.id'], name=op.f('fk_blog_articles_translation_of_id_blog_articles')),
     sa.PrimaryKeyConstraint('id', name=op.f('pk_blog_articles'))
     )
     with op.batch_alter_table('blog_articles', schema=None) as batch_op:
         batch_op.create_index(batch_op.f('ix_blog_articles_author_id'), ['author_id'], unique=False)
+        batch_op.create_index(batch_op.f('ix_blog_articles_language_id'), ['language_id'], unique=False)
         batch_op.create_index(batch_op.f('ix_blog_articles_product_id'), ['product_id'], unique=False)
         batch_op.create_index(batch_op.f('ix_blog_articles_timestamp'), ['timestamp'], unique=False)
         batch_op.create_index(batch_op.f('ix_blog_articles_title'), ['title'], unique=False)
+        batch_op.create_index(batch_op.f('ix_blog_articles_translation_of_id'), ['translation_of_id'], unique=False)
 
     op.create_table('blog_sessions',
     sa.Column('id', sa.Uuid(), nullable=False),
@@ -86,9 +100,11 @@ def downgrade() -> None:
 
     op.drop_table('blog_sessions')
     with op.batch_alter_table('blog_articles', schema=None) as batch_op:
+        batch_op.drop_index(batch_op.f('ix_blog_articles_translation_of_id'))
         batch_op.drop_index(batch_op.f('ix_blog_articles_title'))
         batch_op.drop_index(batch_op.f('ix_blog_articles_timestamp'))
         batch_op.drop_index(batch_op.f('ix_blog_articles_product_id'))
+        batch_op.drop_index(batch_op.f('ix_blog_articles_language_id'))
         batch_op.drop_index(batch_op.f('ix_blog_articles_author_id'))
 
     op.drop_table('blog_articles')
@@ -96,6 +112,10 @@ def downgrade() -> None:
         batch_op.drop_index(batch_op.f('ix_blog_users_customer_id'))
 
     op.drop_table('blog_users')
+    with op.batch_alter_table('languages', schema=None) as batch_op:
+        batch_op.drop_index(batch_op.f('ix_languages_name'))
+
+    op.drop_table('languages')
     with op.batch_alter_table('blog_authors', schema=None) as batch_op:
         batch_op.drop_index(batch_op.f('ix_blog_authors_name'))
 
